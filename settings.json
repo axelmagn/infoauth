@@ -1,0 +1,24 @@
+{
+    "OAuthConfig": {
+        "plus": {
+            "ClientId": "",
+            "ClientSecret": "",
+            "Scope": "",
+            "AuthURL": "",
+            "TokenURL": "",
+            "RedirectURL": "",
+            "AccessType": "",
+            "ApprovalPrompt": ""
+        },
+        "linkedin": {
+            "ClientId": "",
+            "ClientSecret": "",
+            "Scope": "",
+            "AuthURL": "",
+            "TokenURL": "",
+            "RedirectURL": "",
+            "AccessType": "",
+            "ApprovalPrompt": ""
+        }
+    }
+}
