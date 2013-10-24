@@ -1,0 +1,24 @@
+{
+    "OAuthConfig": {
+        "plus": {
+            "ClientId":         "",
+            "ClientSecret":     "",
+            "Scope":            "https://www.googleapis.com/auth/userinfo.profile",
+            "AuthURL":          "https://accounts.google.com/o/oauth2/auth",
+            "TokenURL":         "https://accounts.google.com/o/oauth2/token",
+            "RedirectURL":      "",
+            "AccessType":       "",
+            "ApprovalPrompt":   ""
+        },
+        "linkedin": {
+            "ClientId":         "",
+            "ClientSecret":     "",
+            "Scope":            "",
+            "AuthURL":          "",
+            "TokenURL":         "",
+            "RedirectURL":      "",
+            "AccessType":       "",
+            "ApprovalPrompt":   ""
+        }
+    }
+}
