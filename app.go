@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/axelmagn/infoauth"
+	"github.com/axelmagn/infoauth/infoauth"
 	"github.com/axelmagn/envcfg"
 )
 
@@ -21,8 +21,10 @@ func Init() {
 	// TODO
 
 	// Read config file
-	settings, err := envcfg.ReadSettings(*configFile)
-	infoauth.AddSettings(settings)
+	infoauth.AddSettingsFromFile(*configFile)
+
+	// set up models and db
+	infoauth.InitModels()
 }
 
 func Serve() {}
