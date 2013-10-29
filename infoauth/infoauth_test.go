@@ -3,10 +3,10 @@ package infoauth_test
 import (
 	"bytes"
 	"code.google.com/p/goauth2/oauth"
-	"fmt"
 	"time"
 	"github.com/axelmagn/infoauth/infoauth"
 	"testing"
+	"math/rand"
 )
 
 // test in rough order of init dependency
@@ -20,15 +20,14 @@ func TestAddSettings(t *testing.T) {
 	infoauth.AddSettings(settings)
 }
 
-func ExampleGetSettings() {
-	fmt.Println(infoauth.GetSetting("DB_PATH"))
-	// Output: /tmp/infoauth.gkvlite
-}
-
 // models
 
 func TestInitModels(t *testing.T) {
-	err := infoauth.InitModels()
+	randString, err := infoauth.UintToHex(uint(rand.Uint32()))
+	if err != nil { t.Error("String generation: " + err.Error()) }
+	dbPath := infoauth.GetSetting("DB_PATH") + string(randString)
+	infoauth.AddSetting("DB_PATH", dbPath)
+	err = infoauth.InitModels()
 	if err != nil {
 		t.Error(err.Error())
 	}

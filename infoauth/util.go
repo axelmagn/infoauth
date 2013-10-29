@@ -9,11 +9,13 @@ import (
 
 // Convert Uint to Hex encoded byte array
 func UintToHex(in uint) ([]byte, error) {
-	var out []byte
 	var num = uint64(in)
-	out = make([]byte, binary.Size(num))
-	binary.PutUvarint(out, num)
-	return []byte(hex.Dump(out)), nil
+	bin := make([]byte, binary.Size(num))
+	binary.PutUvarint(bin, num)
+	outLen := hex.EncodedLen(len(bin))
+	out := make([]byte, outLen)
+	hex.Encode(out, bin)
+	return out, nil
 }
 
 // Convert Hex encoded byte array to Uint

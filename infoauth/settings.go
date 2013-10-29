@@ -34,6 +34,9 @@ func AddSettingsFromFile(fname string) error {
 
 func AddSettings(add map[string]string) {
 	for k, v := range add {
-		appSettings[k] = v
+		AddSetting(k, v)
 	}
+}
+func AddSetting(k, v string) {
+	appSettings[k] = v
 }

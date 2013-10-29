@@ -20,10 +20,12 @@ func Init() {
 	// TODO
 
 	// Read config file
-	infoauth.AddSettingsFromFile(*configFile)
+	err := infoauth.AddSettingsFromFile(*configFile)
+	if err != nil { panic(err.Error()) }
 
 	// set up models and db
-	infoauth.InitModels()
+	err = infoauth.InitModels()
+	if err != nil { panic(err.Error()) }
 }
 
 func Serve() {}
