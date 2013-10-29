@@ -10,6 +10,9 @@ import (
 var userCollectionKey = "users"
 var userCollection *gkvlite.Collection
 
+var ErrorStoreCreationFailedSilently = errors.New("Store creation failed with no error.")
+var ErrorInitUserCollectionFailed = errors.New("Failed to initialize user collection")
+
 // set up model data
 func InitModels() error {
 	s, err := InitStore()
@@ -17,15 +20,26 @@ func InitModels() error {
 		return err
 	}
 	if s == nil {
-		return errors.New("Store creation failed with no error.")
+		return ErrorStoreCreationFailedSilently
 	}
 
 	InitUserCollection()
 	if userCollection == nil {
-		return errors.New("Failed to initialize user collection")
+		return ErrorInitUserCollectionFailed
 	}
 
 	return nil
+}
+
+// initialize the user collection
+func InitUserCollection() *gkvlite.Collection {
+	userCollection = GetStore().SetCollection(userCollectionKey, nil)
+	return userCollection
+}
+
+// get the user collection
+func UserCollection() *gkvlite.Collection {
+	return userCollection
 }
 
 // User Model
@@ -34,8 +48,74 @@ type User struct {
 	ID              uint
 	GoogleToken     oauth.Token
 	LinkedInToken   oauth.Token
-	PlusProfile     []byte
-	LinkedInProfile []byte
+	PlusProfile     string
+	LinkedInProfile string
+}
+
+// create a new user using pretty naive key assignment
+func NewUser() (*User, error) {
+	userId , err := NewUserID()
+	if err != nil { return nil, err } 
+
+	out := &User{ID: userId}
+	err = out.Save()
+	if err != nil { return nil, err } 
+	return out, nil
+}
+
+func NewUserID() (uint, error) {
+	var userId uint
+
+	user, err := UserCollection().MaxItem(false)
+	if err != nil {
+		return 0, err
+	}
+
+	if user != nil {
+		userId, err = HexToUint(user.Key)
+		userId++
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		userId = 1
+	}
+
+	return userId, nil
+
+}
+
+// extract user object from raw json
+func DecodeUser(raw []byte) (*User, error) {
+	out := &User{}
+	err := json.Unmarshal(raw, out)
+	if err != nil { return nil, err }
+	return out, nil
+}
+
+// retrieve a user from db by id
+// returns nil, nil if it can't find the user
+// TODO: replace this corner case with proper error typing
+func GetUser(id uint) (*User, error) {
+	idHex, err := UintToHex(id)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := UserCollection().Get(idHex)
+	if err != nil {
+		return nil, err
+	} else if raw == nil {
+		// we cheat a little here. 
+		// TODO: replace with properly typed errors
+		return nil, nil 
+	}
+
+	out, err := DecodeUser(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 // get the user's database key
@@ -60,60 +140,4 @@ func (u *User) Save() error {
 	}
 
 	return UserCollection().Set(k, v)
-}
-
-// retrieve a user from db by id
-func GetUser(id uint) (*User, error) {
-	out := &User{}
-
-	idHex, err := UintToHex(id)
-	if err != nil {
-		return nil, err
-	}
-	raw, err := UserCollection().Get(idHex)
-	if err != nil {
-		return nil, err
-	}
-
-	json.Unmarshal(raw, out)
-	if err != nil {
-		return nil, err
-	}
-
-	return out, nil
-}
-
-// create a new user using pretty naive key assignment
-func NewUser() (*User, error) {
-	var userId uint
-
-	user, err := UserCollection().MaxItem(false)
-	if err != nil {
-		return nil, err
-	}
-
-	if user != nil {
-		userId, err = HexToUint(user.Key)
-		userId++
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		userId = 0
-	}
-
-	out := &User{ID: userId}
-	out.Save()
-	return out, nil
-}
-
-// initialize the user collection
-func InitUserCollection() *gkvlite.Collection {
-	userCollection = GetStore().SetCollection(userCollectionKey, nil)
-	return userCollection
-}
-
-// get the user collection
-func UserCollection() *gkvlite.Collection {
-	return userCollection
 }

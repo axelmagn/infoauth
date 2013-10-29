@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	"log"
 	"github.com/axelmagn/infoauth/infoauth"
 )
 
@@ -26,11 +28,27 @@ func Init() {
 	// set up models and db
 	err = infoauth.InitModels()
 	if err != nil { panic(err.Error()) }
+
+	// set up a dummy user
+	u, err := infoauth.NewUser()
+	if err != nil { panic(err.Error()) }
+	u.PlusProfile = "Google: Axel Magnuson"
+	u.LinkedInProfile = "LinkedIn: Axel Magnuson"
+	u.Save()
+	log.Printf("Created Dummy user\n")
+
+
 }
 
-func Serve() {}
+func Serve() {
+	port := infoauth.GetSetting(infoauth.S_PORT)
+	http.HandleFunc("/user/", infoauth.UserHandler)
+	http.ListenAndServe(":" + port, nil)
+}
 
-func Close() {}
+func Close() {
+
+}
 
 func main() {
 	Init()

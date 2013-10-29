@@ -44,8 +44,8 @@ func TestUser(t *testing.T) {
 
 	u.GoogleToken = oauth.Token{"abc", "def", time.Time{}, nil}
 	u.LinkedInToken = oauth.Token{"hij", "klm", time.Time{}, nil}
-	u.PlusProfile = []byte("plusProfile")
-	u.LinkedInProfile = []byte("plusProfile")
+	u.PlusProfile = "plusProfile"
+	u.LinkedInProfile = "plusProfile"
 
 	err = u.Save()
 	if err != nil {
@@ -102,4 +102,12 @@ func TestEmptyUser(t *testing.T) {
 		t.Error("User value changed after storage.")
 	}
 
+}
+
+func TestGetUser_UserMissing(t *testing.T) {
+	id := uint(rand.Uint32())
+	u, err := infoauth.GetUser(id)
+	if u != nil || err != nil {
+		t.Error("Expected nil user and nil error for GetUser on missing id")
+	}
 }

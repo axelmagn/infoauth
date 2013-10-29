@@ -1,1 +1,3 @@
 DB_PATH     data/db.gkvlite
+PORT		8000
+DEBUG

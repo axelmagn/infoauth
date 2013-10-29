@@ -8,6 +8,8 @@ import (
 var appSettings map[string]string = make(map[string]string)
 
 var S_DB_PATH = "DB_PATH"
+var S_DEBUG = "DEBUG"
+var S_PORT = "PORT"
 
 func GetSettings() map[string]string {
 	return appSettings
