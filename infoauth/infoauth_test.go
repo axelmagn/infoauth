@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"code.google.com/p/goauth2/oauth"
 	"fmt"
+	"time"
 	"github.com/axelmagn/infoauth/infoauth"
 	"testing"
 )
@@ -33,34 +34,72 @@ func TestInitModels(t *testing.T) {
 	}
 }
 
-func TestUser() {
+func TestUser(t *testing.T) {
 	u, err := infoauth.NewUser()
 	if err != nil {
-		t.Error("NewUser error: " + err.Error)
+		t.Error("NewUser error: " + err.Error())
 	}
 	if u == nil {
 		t.Error("NewUser returns nil user.")
 	}
-	if u.id == nil {
-		t.Error("NewUser returns user with nil id.")
-	}
 
-	u.googleToken = oauth.Token{"abc", "def", time.Time{}, nil}
-	u.linkedInToken = oauth.Token{"hij", "klm", time.Time{}, nil}
-	u.plusProfile = []byte("userPlusProfile")
-	u.linkedInProfile = []byte("userLinkedInProfile")
+	u.GoogleToken = oauth.Token{"abc", "def", time.Time{}, nil}
+	u.LinkedInToken = oauth.Token{"hij", "klm", time.Time{}, nil}
+	u.PlusProfile = []byte("plusProfile")
+	u.LinkedInProfile = []byte("plusProfile")
 
 	err = u.Save()
 	if err != nil {
-		t.Error("u.Save error: " + err.Error)
+		t.Error("u.Save error: " + err.Error())
 	}
 
-	u2, err := GetUser(u.id)
+	u2, err := infoauth.GetUser(u.ID)
 	if err != nil {
-		t.Error("GetUser error: " + err.Error)
+		t.Error("GetUser error: " + err.Error())
 	}
 
-	if !bytes.Equal(u.Value(), u2.Value()) {
+	uv, err := u.Value()
+	if err != nil {
+		t.Error("u.Value error: " + err.Error())
+	}
+	u2v, err := u2.Value()
+	if err != nil {
+		t.Error("u2.Value error: " + err.Error())
+	}
+	if !bytes.Equal(uv, u2v) {
+		t.Error("User value changed after storage.")
+	}
+
+}
+
+func TestEmptyUser(t *testing.T) {
+	u, err := infoauth.NewUser()
+	if err != nil {
+		t.Error("NewUser error: " + err.Error())
+	}
+	if u == nil {
+		t.Error("NewUser returns nil user.")
+	}
+
+	err = u.Save()
+	if err != nil {
+		t.Error("u.Save error: " + err.Error())
+	}
+
+	u2, err := infoauth.GetUser(u.ID)
+	if err != nil {
+		t.Error("GetUser error: " + err.Error())
+	}
+
+	uv, err := u.Value()
+	if err != nil {
+		t.Error("u.Value error: " + err.Error())
+	}
+	u2v, err := u2.Value()
+	if err != nil {
+		t.Error("u2.Value error: " + err.Error())
+	}
+	if !bytes.Equal(uv, u2v) {
 		t.Error("User value changed after storage.")
 	}
 

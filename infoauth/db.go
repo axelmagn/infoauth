@@ -21,6 +21,7 @@ func InitStore() (*gkvlite.Store, error) {
 		return nil, err
 	}
 
+	defaultStore = s
 	return s, nil
 }
 

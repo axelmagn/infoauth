@@ -12,9 +12,12 @@ var userCollection *gkvlite.Collection
 
 // set up model data
 func InitModels() error {
-	_, err := InitStore()
+	s, err := InitStore()
 	if err != nil {
 		return err
+	}
+	if s == nil {
+		return errors.New("Store creation failed with no error.")
 	}
 
 	InitUserCollection()
@@ -28,16 +31,16 @@ func InitModels() error {
 // User Model
 // implements Saveable
 type User struct {
-	id              uint
-	googleToken     oauth.Token
-	linkedInToken   oauth.Token
-	plusProfile     json.RawMessage
-	linkedInProfile json.RawMessage
+	ID              uint
+	GoogleToken     oauth.Token
+	LinkedInToken   oauth.Token
+	PlusProfile     []byte
+	LinkedInProfile []byte
 }
 
 // get the user's database key
 func (u *User) Key() ([]byte, error) {
-	return UintToHex(u.id)
+	return UintToHex(u.ID)
 }
 
 // get the user's database encoding (a byte array of json)
@@ -82,18 +85,24 @@ func GetUser(id uint) (*User, error) {
 
 // create a new user using pretty naive key assignment
 func NewUser() (*User, error) {
+	var userId uint
+
 	user, err := UserCollection().MaxItem(false)
 	if err != nil {
 		return nil, err
 	}
 
-	userId, err := HexToUint(user.Key)
-	userId++
-	if err != nil {
-		return nil, err
+	if user != nil {
+		userId, err = HexToUint(user.Key)
+		userId++
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		userId = 0
 	}
 
-	out := &User{id: userId}
+	out := &User{ID: userId}
 	out.Save()
 	return out, nil
 }
