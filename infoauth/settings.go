@@ -2,6 +2,7 @@ package infoauth
 
 import (
 	"github.com/axelmagn/envcfg"
+	"os"
 )
 
 var appSettings map[string]string = make(map[string]string)
@@ -16,11 +17,17 @@ func GetSetting(key string) string {
 	return appSettings[key]
 }
 
-func AddSettingsFromFile(fname string) error { 
-	settings, err := envcfg.ReadSettings(fname)
+func AddSettingsFromFile(fname string) error {
+	f, err := os.Open(fname)
 	if err != nil {
 		return err
 	}
+
+	settings, err := envcfg.ReadSettings(f)
+	if err != nil {
+		return err
+	}
+
 	AddSettings(settings)
 	return nil
 }

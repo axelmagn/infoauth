@@ -3,11 +3,10 @@ package main
 import (
 	"flag"
 	"github.com/axelmagn/infoauth/infoauth"
-	"github.com/axelmagn/envcfg"
 )
 
 var (
-	configFile	= flag.String("config", "config/settings.ecfg", "Config File")
+	configFile = flag.String("config", "config/settings.ecfg", "Config File")
 )
 
 const usageMsg = `
