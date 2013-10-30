@@ -10,6 +10,12 @@ import (
 var userCollectionKey = "users"
 var userCollection *gkvlite.Collection
 
+var googleUserIndexKey = "users.google_id"
+var googleUserIndex *gkvlite.Collection
+
+var linkedInUserIndexKey = "users.linkedin_id"
+var linkedInUserIndex *gkvlite.Collection
+
 var ErrorStoreCreationFailedSilently = errors.New("Store creation failed with no error.")
 var ErrorInitUserCollectionFailed = errors.New("Failed to initialize user collection")
 
@@ -37,9 +43,29 @@ func InitUserCollection() *gkvlite.Collection {
 	return userCollection
 }
 
+// initialize index of users by their google id
+func InitGoogleUserIndex() *gkvlite.Collection {
+	googleUserIndex = GetStore().SetCollection(googleUserIndexKey, nil)
+	return googleUserIndex
+}
+
+// initialize index of users by their linkedin id
+func InitLinkedInUserIndex() *gkvlite.Collection {
+	linkedInUserIndex = GetStore().SetCollection(linkedInUserIndexKey, nil)
+	return linkedInUserIndex
+}
+
 // get the user collection
 func UserCollection() *gkvlite.Collection {
 	return userCollection
+}
+
+func GoogleUserIndex() *gkvlite.Collection {
+	return googleUserIndex
+}
+
+func LinkedInUserIndex() *gkvlte.Collection {
+	return linkedInUserIndex
 }
 
 // User Model
@@ -124,6 +150,14 @@ func GetUser(id uint) (*User, error) {
 	return out, nil
 }
 
+func GetUserByGoogleID(id string) (*User, error) {
+	// TODO
+}
+
+func GetUserByLinkedInID(id string) (*User, error) {
+	// TODO
+}
+
 // get the user's database key
 func (u *User) Key() ([]byte, error) {
 	return UintToHex(u.ID)
@@ -144,6 +178,9 @@ func (u *User) Save() error {
 	if err != nil {
 		return err
 	}
+
+	// extract plus id for index
+	// extract linkedin id for index
 
 	return UserCollection().Set(k, v)
 }

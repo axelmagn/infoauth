@@ -1,6 +1,7 @@
 package infoauth
 
 import (
+	"errors"
 	"github.com/steveyen/gkvlite"
 	"os"
 )

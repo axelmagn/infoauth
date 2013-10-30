@@ -16,16 +16,21 @@ var handshakeCollection *gkvlite.Collection
 var GoogleOauthConfig *oauth.Config
 var GoogleOauthTransport *oauth.Transport
 var LinkedInOauthConfig *oauth.Config
+var LinkedInOauthTransport *oauth.Transport
 
-const StateLen = hex.DecodedLen(16)
+var StateLen int
+
+const StateByteLen = 16
 const HandshakeExpireDuration = 5 * time.Minute
 
 const (
-	C_GOOGLE uint = iota,
-		C_LINKEDIN
+	C_GOOGLE uint = iota
+	C_LINKEDIN
 )
 
 func InitOauthConfig() {
+	StateLen = hex.DecodedLen(StateByteLen)
+
 	GoogleOauthConfig = &oauth.Config{
 		ClientId:     GetSetting(S_GOOGLE_CLIENT_ID),
 		ClientSecret: GetSetting(S_GOOGLE_CLIENT_SECRET),
@@ -51,7 +56,17 @@ type Handshake struct {
 	State   string
 	Expires time.Time
 	Config  uint // we don't store a config pointer so that marshalling doesn't duplicate config
+	Exchanged bool
+}
 
+func DecodeHandshake(raw []byte) (*Handshake, error) {
+	out := &Handshake{}
+	err := json.Unmarshal(raw, out)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 func NewGoogleAuthURL() (string, error) {
@@ -66,17 +81,65 @@ func NewGoogleAuthURL() (string, error) {
 		State:   randStr,
 		Expires: time.Now().Add(HandshakeExpireDuration),
 		Config:  C_GOOGLE,
+		Exchanged: false,
 	}
 
 	// use handshake state token to get new url
 	err = h.Save()
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return h.State, nil
 }
 
-func ExchangeCode(code, state string)
+func ExchangeCode(code, state string) (*oauth.Token, error) {
+	// get handshake collection
+	c := HandshakeCollection()
+	if c == nil {
+		return nil, errors.New("Could not get Handshake Collection")
+	}
+
+	// retrieve handshake by state and make sure it exists
+	hraw, err := c.Get()
+	if err != nil {
+		return nil, err
+	}
+	if hraw == nil {
+		return nil, errors.New("State token not found")
+	}
+
+	// decode serialized handshake
+	h, err := DecodeHandshake(hraw)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the correct trasport
+	var transport *oauth.Transport
+	switch *h.Config {
+	case C_GOOGLE:
+		transport = GoogleOauthTransport
+	case C_LINKEDIN:
+		transport = LinkedInOauthTransport
+	default:
+		return nil, errors.New("Unknown Oauth configuration")
+	}
+
+	// exchange code for token
+	token, err := transport.Exchange(code)
+	if err != nil {
+		return nil, err
+	}
+
+	// mark handshake as exchanged
+	h.Exchanged = true
+	err = h.Save()
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
 
 func (h *Handshake) Key() ([]byte, error) {
 	return []byte(h.State), nil
