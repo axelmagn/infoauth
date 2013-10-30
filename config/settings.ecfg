@@ -2,17 +2,18 @@ DB_PATH     data/db.gkvlite
 PORT		8000
 DEBUG
 
-LINKEDIN_CLIENT_ID			_
-LINKEDIN_CLIENT_SECRET 		_
-LINKEDIN_SCOPE				_	
-LINKEDIN_AUTH_URL 			_
-LINKEDIN_TOKEN_URL 			_
-LINKEDIN_REDIRECT_URL 		_
+LINKEDIN_CLIENT_ID
+LINKEDIN_CLIENT_SECRET
+LINKEDIN_SCOPE
+LINKEDIN_AUTH_URL 
+LINKEDIN_TOKEN_URL 
+LINKEDIN_REDIRECT_URL
 
 GOOGLE_CLIENT_ID			ENV:GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET		ENV:GOOGLE_CLIENT_SECRET 
 GOOGLE_REDIRECT_URL			ENV:GOOGLE_REDIRECT_URL
-GOOGLE_SCOPE 				https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/plus.login
+GOOGLE_SCOPE 				https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/plus.login
 GOOGLE_AUTH_URL 			https://accounts.google.com/o/oauth2/auth
 GOOGLE_TOKEN_URL 			https://accounts.google.com/o/oauth2/token
-GOOGLE_REQUEST_URL 		https://www.googleapis.com/oauth2/v1/userinfo
+GOOGLE_USERINFO_URL 		https://www.googleapis.com/oauth2/v1/userinfo
+GOOGLE_PERSON_URL 			https://www.googleapis.com/plus/v1/people/me

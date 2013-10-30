@@ -29,11 +29,15 @@ func Init() {
 		panic(err.Error())
 	}
 
+	// set up config
+	infoauth.InitOauthConfig()
+
 	// set up models and db
 	err = infoauth.InitModels()
 	if err != nil {
 		panic(err.Error())
 	}
+
 
 	// set up a dummy user
 	u := &infoauth.User{ID: 1}
@@ -47,6 +51,8 @@ func Init() {
 func Serve() {
 	port := infoauth.GetSetting(infoauth.S_PORT)
 	http.HandleFunc("/user/", infoauth.UserHandler)
+	http.HandleFunc("/oauth/url", infoauth.GetGoogleAuthURLHandler)
+	http.HandleFunc("/oauth/token", infoauth.ExchangeCodeHandler)
 	log.Printf("Starting Server on port %s...", port)
 	http.ListenAndServe(":"+port, nil)
 }

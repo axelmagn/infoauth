@@ -1,7 +1,6 @@
 package infoauth
 
 import (
-	"code.google.com/p/goauth2/oauth"
 	"encoding/json"
 	"errors"
 	"github.com/steveyen/gkvlite"
@@ -54,8 +53,6 @@ func LinkedInUserIndex() *gkvlite.Collection {
 // implements Saveable
 type User struct {
 	ID              uint
-	GoogleToken     oauth.Token
-	LinkedInToken   oauth.Token
 	PlusProfile     string
 	LinkedInProfile string
 }

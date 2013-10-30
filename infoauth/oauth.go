@@ -6,9 +6,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strings"
 	"time"
 	"github.com/steveyen/gkvlite"
 	"code.google.com/p/goauth2/oauth"
+	// "code.google.com/p/google-api-go-client/plus/v1"
 )
 
 var handshakeCollectionKey = "handshakes"
@@ -19,9 +22,8 @@ var GoogleOauthTransport *oauth.Transport
 var LinkedInOauthConfig *oauth.Config
 var LinkedInOauthTransport *oauth.Transport
 
-var StateLen int
+const StateLen = 2 // size of uint16
 
-const StateByteLen = 16
 const HandshakeExpireDuration = 5 * time.Minute
 
 const (
@@ -30,13 +32,15 @@ const (
 )
 
 func InitOauthConfig() {
-	StateLen = hex.DecodedLen(StateByteLen)
+
+	scopeReplacer := strings.NewReplacer(",", " ")
+	googleScope := scopeReplacer.Replace(GetSetting(S_GOOGLE_SCOPE))
 
 	GoogleOauthConfig = &oauth.Config{
 		ClientId:     GetSetting(S_GOOGLE_CLIENT_ID),
 		ClientSecret: GetSetting(S_GOOGLE_CLIENT_SECRET),
 		RedirectURL:  GetSetting(S_GOOGLE_REDIRECT_URL),
-		Scope:        GetSetting(S_GOOGLE_SCOPE),
+		Scope:        googleScope,
 		AuthURL:      GetSetting(S_GOOGLE_AUTH_URL),
 		TokenURL:     GetSetting(S_GOOGLE_TOKEN_URL),
 	}
@@ -54,7 +58,7 @@ func HandshakeCollection() *gkvlite.Collection {
 }
 
 type Handshake struct {
-	State   string
+	State   []byte
 	Expires time.Time
 	Config  uint // we don't store a config pointer so that marshalling doesn't duplicate config
 	Exchanged bool
@@ -77,9 +81,9 @@ func NewGoogleAuthURL() (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	randStr := hex.EncodeToString(randBytes)
+
 	h := &Handshake{
-		State:   randStr,
+		State:   randBytes,
 		Expires: time.Now().Add(HandshakeExpireDuration),
 		Config:  C_GOOGLE,
 		Exchanged: false,
@@ -90,18 +94,30 @@ func NewGoogleAuthURL() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return h.State, nil
+
+	// convert to hex for printing
+	stateHex := hex.EncodeToString(h.State) 
+
+	// get url using state
+	url:= GoogleOauthConfig.AuthCodeURL(stateHex)
+
+	// encode to string
+	return url, nil
 }
 
-func ExchangeCode(code, state string) (*oauth.Token, error) {
+func ExchangeCode(code, stateHex string) (*oauth.Token, error) {
 	// get handshake collection
 	c := HandshakeCollection()
 	if c == nil {
 		return nil, errors.New("Could not get Handshake Collection")
 	}
 
-	// retrieve handshake by state and make sure it exists
-	hraw, err := c.Get([]byte(state))
+	// retrieve handshake by stateHex and make sure it exists
+	state, err := hex.DecodeString(stateHex)
+	if err != nil {
+		return nil, err
+	}
+	hraw, err := c.Get(state)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +142,8 @@ func ExchangeCode(code, state string) (*oauth.Token, error) {
 		return nil, errors.New("Unknown Oauth configuration")
 	}
 
+	// TODO check that state isn't expired, and that it hasn't already been redeemed
+
 	// exchange code for token
 	token, err := transport.Exchange(code)
 	if err != nil {
@@ -140,6 +158,44 @@ func ExchangeCode(code, state string) (*oauth.Token, error) {
 	}
 
 	return token, nil
+}
+
+func GetGoogleUserInfo(token *oauth.Token) (*http.Response, error) {
+	transport := &oauth.Transport{
+		Token: token,
+		Config: GoogleOauthConfig,
+		Transport: http.DefaultTransport,
+	}
+
+	client := transport.Client()
+
+	url := GetSetting(S_GOOGLE_USERINFO_URL)
+
+	r, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func GetGooglePlusProfile(token *oauth.Token) (*http.Response, error) {
+	transport := &oauth.Transport{
+		Token: token,
+		Config: GoogleOauthConfig,
+		Transport: http.DefaultTransport,
+	}
+
+	client := transport.Client()
+
+	url := GetSetting(S_GOOGLE_PERSON_URL)
+
+	r, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 func (h *Handshake) Key() ([]byte, error) {

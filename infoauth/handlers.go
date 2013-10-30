@@ -1,10 +1,12 @@
 package infoauth
 
 import (
-	"github.com/axelmagn/envcfg"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"github.com/axelmagn/envcfg"
 )
 
 const UserContentKey = "user"
@@ -107,7 +109,8 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetAuthURLHandler(w http.ResponseWriter, r *http.Request) {
+func GetGoogleAuthURLHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET:\t%s", r.URL.Path)
 	url, err := NewGoogleAuthURL()
 	if err != nil {
 		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
@@ -117,6 +120,7 @@ func GetAuthURLHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET:\t%s", r.URL.Path)
 	code := r.FormValue(OauthCodeKey)
 	if code == "" {
 		http.Error(w, "No auth code specified.", http.StatusBadRequest)
@@ -125,10 +129,36 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	state := r.FormValue(OauthStateKey)
 	if state == "" {
-		http.Error(W, "No state token specified", http.StatusBadRequest)
+		http.Error(w, "No state token specified", http.StatusBadRequest)
 		return
 	}
 
-	
+	token, err := ExchangeCode(code, state)
+	if err != nil {
+		http.Error(w, "Could not exchange token: " + err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tokenJSON, err := json.Marshal(token)
+	if err != nil {
+		http.Error(w, "Error serializing token.\n" + Debug(err), http.StatusInternalServerError)
+		return		
+	}
+
+	userInfo, err := GetGoogleUserInfo(token)
+	if err != nil {
+		http.Error(w, "Error retrieving user info.\n" + Debug(err), http.StatusInternalServerError)
+	}
+
+	plusProfile, err := GetGooglePlusProfile(token)
+	if err != nil {
+		http.Error(w, "Error retrieving user plus profile.\n" + Debug(err), http.StatusInternalServerError)
+	}
+
+	defer userInfo.Body.Close()
+	defer plusProfile.Body.Close()
+	io.Copy(w, userInfo.Body)
+	io.Copy(w, plusProfile.Body)
+	w.Write(tokenJSON)
 }
 
