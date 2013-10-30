@@ -7,8 +7,11 @@ import (
 	"strconv"
 )
 
-var UserContentKey = "user"
-var UserIDKey = "id"
+const UserContentKey = "user"
+const UserIDKey = "id"
+
+const OauthCodeKey = "code" 
+const OauthStateKey = "state" 
 
 func Debug(e error) string {
 	debug := GetSetting(S_DEBUG)
@@ -102,4 +105,29 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("PUT:\t%s", r.URL.Path)
 		SaveUserHandler(w, r)
 	}
+}
+
+func GetAuthURLHandler(w http.ResponseWriter, r *http.Request) {
+	url, err := NewGoogleAuthURL()
+	if err != nil {
+		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte(url))
+}
+
+func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
+	code := r.FormValue(OauthCodeKey)
+	if code == "" {
+		http.Error(w, "No auth code specified.", http.StatusBadRequest)
+		return
+	}
+
+	state := r.FormValue(OauthStateKey)
+	if state == "" {
+		http.Error(W, "No state token specified", http.StatusBadRequest)
+		return
+	}
+
+	
 }
