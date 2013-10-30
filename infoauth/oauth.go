@@ -2,12 +2,13 @@
 package infoauth
 
 import (
-	"code.google.com/p/goauth2/oauth"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/steveyen/gkvlite"
+	"errors"
 	"time"
+	"github.com/steveyen/gkvlite"
+	"code.google.com/p/goauth2/oauth"
 )
 
 var handshakeCollectionKey = "handshakes"
@@ -71,7 +72,7 @@ func DecodeHandshake(raw []byte) (*Handshake, error) {
 
 func NewGoogleAuthURL() (string, error) {
 	// init & store new handshake struct
-	randBytes := make([]bytes, StateLen)
+	randBytes := make([]byte, StateLen)
 	_, err := rand.Reader.Read(randBytes)
 	if err != nil {
 		return "", nil
@@ -100,7 +101,7 @@ func ExchangeCode(code, state string) (*oauth.Token, error) {
 	}
 
 	// retrieve handshake by state and make sure it exists
-	hraw, err := c.Get()
+	hraw, err := c.Get([]byte(state))
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func ExchangeCode(code, state string) (*oauth.Token, error) {
 
 	// get the correct trasport
 	var transport *oauth.Transport
-	switch *h.Config {
+	switch h.Config {
 	case C_GOOGLE:
 		transport = GoogleOauthTransport
 	case C_LINKEDIN:
@@ -150,12 +151,15 @@ func (h *Handshake) Value() ([]byte, error) {
 }
 
 func (h *Handshake) Save() error {
-	k := h.Key()
+	k, err := h.Key()
+	if err != nil {
+		return err
+	}
 
 	v, err := h.Value()
 	if err != nil {
 		return err
 	}
 
-	return HandshakeCollection.Set(k, v)
+	return HandshakeCollection().Set(k, v)
 }

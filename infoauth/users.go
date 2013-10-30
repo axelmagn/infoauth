@@ -19,24 +19,6 @@ var linkedInUserIndex *gkvlite.Collection
 var ErrorStoreCreationFailedSilently = errors.New("Store creation failed with no error.")
 var ErrorInitUserCollectionFailed = errors.New("Failed to initialize user collection")
 
-// set up model data
-func InitModels() error {
-	s, err := InitStore()
-	if err != nil {
-		return err
-	}
-	if s == nil {
-		return ErrorStoreCreationFailedSilently
-	}
-
-	InitUserCollection()
-	if userCollection == nil {
-		return ErrorInitUserCollectionFailed
-	}
-
-	return nil
-}
-
 // initialize the user collection
 func InitUserCollection() *gkvlite.Collection {
 	userCollection = GetStore().SetCollection(userCollectionKey, nil)
@@ -64,7 +46,7 @@ func GoogleUserIndex() *gkvlite.Collection {
 	return googleUserIndex
 }
 
-func LinkedInUserIndex() *gkvlte.Collection {
+func LinkedInUserIndex() *gkvlite.Collection {
 	return linkedInUserIndex
 }
 
@@ -150,12 +132,14 @@ func GetUser(id uint) (*User, error) {
 	return out, nil
 }
 
+// TODO
 func GetUserByGoogleID(id string) (*User, error) {
-	// TODO
+	return nil, nil
 }
 
+// TODO
 func GetUserByLinkedInID(id string) (*User, error) {
-	// TODO
+	return nil, nil
 }
 
 // get the user's database key

@@ -47,7 +47,7 @@ func Init() {
 func Serve() {
 	port := infoauth.GetSetting(infoauth.S_PORT)
 	http.HandleFunc("/user/", infoauth.UserHandler)
-	log.Printf("Starting Server...")
+	log.Printf("Starting Server on port %s...", port)
 	http.ListenAndServe(":"+port, nil)
 }
 
