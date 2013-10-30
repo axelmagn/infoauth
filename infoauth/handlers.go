@@ -119,6 +119,16 @@ func GetGoogleAuthURLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(url))
 }
 
+func GetLinkedInAuthURLHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET:\t%s", r.URL.Path)
+	url, err := NewLinkedInAuthURL()
+	if err != nil {
+		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte(url))
+}
+
 func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET:\t%s", r.URL.Path)
 	code := r.FormValue(OauthCodeKey)
@@ -133,6 +143,7 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: rewrite this to get a handshake so that it knows what service it's using
 	token, err := ExchangeCode(code, state)
 	if err != nil {
 		http.Error(w, "Could not exchange token: " + err.Error(), http.StatusBadRequest)
@@ -145,11 +156,13 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 		return		
 	}
 
+	// TODO: only do this for google
 	userInfo, err := GetGoogleUserInfo(token)
 	if err != nil {
 		http.Error(w, "Error retrieving user info.\n" + Debug(err), http.StatusInternalServerError)
 	}
 
+	// TODO: only do this for google
 	plusProfile, err := GetGooglePlusProfile(token)
 	if err != nil {
 		http.Error(w, "Error retrieving user plus profile.\n" + Debug(err), http.StatusInternalServerError)

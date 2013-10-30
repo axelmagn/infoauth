@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ const HandshakeExpireDuration = 5 * time.Minute
 const (
 	C_GOOGLE uint = iota
 	C_LINKEDIN
+	C_UNKNOWN
 )
 
 func InitOauthConfig() {
@@ -46,6 +48,17 @@ func InitOauthConfig() {
 	}
 	GoogleOauthTransport = &oauth.Transport{Config: GoogleOauthConfig}
 
+	linkedInScope := scopeReplacer.Replace(GetSetting(S_LINKEDIN_SCOPE))
+	LinkedInOauthConfig = &oauth.Config{
+		ClientId:     GetSetting(S_LINKEDIN_CLIENT_ID),
+		ClientSecret: GetSetting(S_LINKEDIN_CLIENT_SECRET),
+		RedirectURL:  GetSetting(S_LINKEDIN_REDIRECT_URL),
+		Scope:        linkedInScope,
+		AuthURL:      GetSetting(S_LINKEDIN_AUTH_URL),
+		TokenURL:     GetSetting(S_LINKEDIN_TOKEN_URL),
+	}
+	LinkedInOauthTransport = &oauth.Transport{Config: LinkedInOauthConfig}
+
 }
 
 func InitHandshakeCollection() *gkvlite.Collection {
@@ -55,6 +68,28 @@ func InitHandshakeCollection() *gkvlite.Collection {
 
 func HandshakeCollection() *gkvlite.Collection {
 	return handshakeCollection
+}
+
+func ConfigToConst(c *oauth.Config) uint {
+	switch c {
+	case GoogleOauthConfig:
+		return C_GOOGLE
+	case LinkedInOauthConfig:
+		return C_LINKEDIN
+	default:
+		return C_UNKNOWN
+	}
+}
+
+func ConstToConfig(c uint) *oauth.Config {
+	switch c {
+	case C_GOOGLE:
+		return GoogleOauthConfig
+	case C_LINKEDIN:
+		return LinkedInOauthConfig
+	default:
+		return nil
+	}
 }
 
 type Handshake struct {
@@ -75,6 +110,14 @@ func DecodeHandshake(raw []byte) (*Handshake, error) {
 }
 
 func NewGoogleAuthURL() (string, error) {
+	return NewAuthUrl(GoogleOauthConfig)
+}
+
+func NewLinkedInAuthURL() (string, error) {
+	return NewAuthUrl(LinkedInOauthConfig)
+}
+
+func NewAuthUrl(c *oauth.Config) (string, error) {
 	// init & store new handshake struct
 	randBytes := make([]byte, StateLen)
 	_, err := rand.Reader.Read(randBytes)
@@ -82,10 +125,14 @@ func NewGoogleAuthURL() (string, error) {
 		return "", nil
 	}
 
+	configConst := ConfigToConst(c)
+	if configConst == C_UNKNOWN {
+		return "", fmt.Errorf("Unknown config %v", c)
+	}
 	h := &Handshake{
 		State:   randBytes,
 		Expires: time.Now().Add(HandshakeExpireDuration),
-		Config:  C_GOOGLE,
+		Config:  configConst,
 		Exchanged: false,
 	}
 
@@ -99,7 +146,7 @@ func NewGoogleAuthURL() (string, error) {
 	stateHex := hex.EncodeToString(h.State) 
 
 	// get url using state
-	url:= GoogleOauthConfig.AuthCodeURL(stateHex)
+	url:= c.AuthCodeURL(stateHex)
 
 	// encode to string
 	return url, nil
@@ -131,6 +178,8 @@ func ExchangeCode(code, stateHex string) (*oauth.Token, error) {
 		return nil, err
 	}
 
+	// TODO check that state isn't expired, and that it hasn't already been redeemed
+
 	// get the correct trasport
 	var transport *oauth.Transport
 	switch h.Config {
@@ -142,7 +191,6 @@ func ExchangeCode(code, stateHex string) (*oauth.Token, error) {
 		return nil, errors.New("Unknown Oauth configuration")
 	}
 
-	// TODO check that state isn't expired, and that it hasn't already been redeemed
 
 	// exchange code for token
 	token, err := transport.Exchange(code)
