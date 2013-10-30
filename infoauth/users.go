@@ -54,12 +54,16 @@ type User struct {
 
 // create a new user using pretty naive key assignment
 func NewUser() (*User, error) {
-	userId , err := NewUserID()
-	if err != nil { return nil, err } 
+	userId, err := NewUserID()
+	if err != nil {
+		return nil, err
+	}
 
 	out := &User{ID: userId}
 	err = out.Save()
-	if err != nil { return nil, err } 
+	if err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -89,7 +93,9 @@ func NewUserID() (uint, error) {
 func DecodeUser(raw []byte) (*User, error) {
 	out := &User{}
 	err := json.Unmarshal(raw, out)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -105,9 +111,9 @@ func GetUser(id uint) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if raw == nil {
-		// we cheat a little here. 
+		// we cheat a little here.
 		// TODO: replace with properly typed errors
-		return nil, nil 
+		return nil, nil
 	}
 
 	out, err := DecodeUser(raw)

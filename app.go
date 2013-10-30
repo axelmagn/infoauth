@@ -55,12 +55,12 @@ func Close() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	for sig := range c {
-		
+
 		log.Printf(sig.String())
 		log.Printf("Recieved Interrupt Signal.")
 		log.Printf("Closing...")
 
-		log.Printf("Flushing Database...")	
+		log.Printf("Flushing Database...")
 		infoauth.GetStore().Flush()
 
 		os.Exit(0)

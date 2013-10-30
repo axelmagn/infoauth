@@ -39,9 +39,14 @@ func InitModels() error {
 		return ErrorStoreCreationFailedSilently
 	}
 
-	InitUserCollection()
-	if userCollection == nil {
-		return ErrorInitUserCollectionFailed
+	c := InitUserCollection()
+	if c == nil {
+		return errors.New("Failed to initialize user collection")
+	}
+
+	c = InitHandshakeCollection()
+	if c == nil {
+		return errors.New("Failed to initialize handshake collection")
 	}
 
 	return nil
