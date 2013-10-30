@@ -19,7 +19,14 @@ func Debug(e error) string {
 }
 
 func GetUserHandler(w http.ResponseWriter, r *http.Request)  {
-	id64, err := strconv.ParseUint(r.FormValue(UserIDKey), 10, 0)
+	idStr := r.FormValue(UserIDKey)
+	if idStr == "" {
+		http.Error(w, "No User ID Specified.", http.StatusBadRequest)
+		return
+	}
+
+
+	id64, err := strconv.ParseUint(idStr, 10, 0)
 	id := uint(id64)
 	if err != nil {
 		http.Error(w, "Error parsing User id.\n" + Debug(err), http.StatusInternalServerError)

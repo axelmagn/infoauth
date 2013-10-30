@@ -28,3 +28,21 @@ func InitStore() (*gkvlite.Store, error) {
 func GetStore() *gkvlite.Store {
 	return defaultStore
 }
+
+// set up model data
+func InitModels() error {
+	s, err := InitStore()
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		return ErrorStoreCreationFailedSilently
+	}
+
+	InitUserCollection()
+	if userCollection == nil {
+		return ErrorInitUserCollectionFailed
+	}
+
+	return nil
+}
