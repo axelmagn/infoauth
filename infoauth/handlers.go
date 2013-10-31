@@ -144,7 +144,7 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: rewrite this to get a handshake so that it knows what service it's using
-	token, err := ExchangeCode(code, state)
+	token, serviceName, err := ExchangeCode(code, state)
 	if err != nil {
 		http.Error(w, "Could not exchange token: " + err.Error(), http.StatusBadRequest)
 		return
@@ -153,25 +153,49 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 	tokenJSON, err := json.Marshal(token)
 	if err != nil {
 		http.Error(w, "Error serializing token.\n" + Debug(err), http.StatusInternalServerError)
-		return		
+		return
 	}
 
-	// TODO: only do this for google
-	userInfo, err := GetGoogleUserInfo(token)
-	if err != nil {
-		http.Error(w, "Error retrieving user info.\n" + Debug(err), http.StatusInternalServerError)
-	}
+    switch serviceName {
+    case GoogleServiceName:
+        // TODO: only do this for google
+        userInfo, err := GetGoogleUserInfo(token)
+        if err != nil {
+            http.Error(w, "Error retrieving user info.\n" + Debug(err), http.StatusInternalServerError)
+        }
 
-	// TODO: only do this for google
-	plusProfile, err := GetGooglePlusProfile(token)
-	if err != nil {
-		http.Error(w, "Error retrieving user plus profile.\n" + Debug(err), http.StatusInternalServerError)
-	}
+        // TODO: only do this for google
+        plusProfile, err := GetGooglePlusProfile(token)
+        if err != nil {
+            http.Error(w, "Error retrieving user plus profile.\n" + Debug(err), http.StatusInternalServerError)
+        }
+        defer userInfo.Body.Close()
+        defer plusProfile.Body.Close()
+        io.Copy(w, userInfo.Body)
+        io.Copy(w, plusProfile.Body)
+    }
 
-	defer userInfo.Body.Close()
-	defer plusProfile.Body.Close()
-	io.Copy(w, userInfo.Body)
-	io.Copy(w, plusProfile.Body)
+    w.Write([]byte("\nService:\t"+serviceName+"\n"))
 	w.Write(tokenJSON)
+}
+
+func GoogleAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET:\t%s", r.URL.Path)
+	url, err := NewGoogleAuthURL()
+	if err != nil {
+		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+    http.Redirect(w, r, url, http.StatusSeeOther)
+}
+
+func LinkedInAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET:\t%s", r.URL.Path)
+	url, err := NewLinkedInAuthURL()
+	if err != nil {
+		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+    http.Redirect(w, r, url, http.StatusSeeOther)
 }
 

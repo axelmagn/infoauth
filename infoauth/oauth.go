@@ -23,6 +23,9 @@ var GoogleOauthTransport *oauth.Transport
 var LinkedInOauthConfig *oauth.Config
 var LinkedInOauthTransport *oauth.Transport
 
+const GoogleServiceName = "GOOGLE"
+const LinkedInServiceName = "LINKEDIN"
+
 const StateLen = 2 // size of uint16
 
 const HandshakeExpireDuration = 5 * time.Minute
@@ -143,7 +146,7 @@ func NewAuthUrl(c *oauth.Config) (string, error) {
 	}
 
 	// convert to hex for printing
-	stateHex := hex.EncodeToString(h.State) 
+	stateHex := hex.EncodeToString(h.State)
 
 	// get url using state
 	url:= c.AuthCodeURL(stateHex)
@@ -152,60 +155,63 @@ func NewAuthUrl(c *oauth.Config) (string, error) {
 	return url, nil
 }
 
-func ExchangeCode(code, stateHex string) (*oauth.Token, error) {
+func ExchangeCode(code, stateHex string) (*oauth.Token, string, error) {
 	// get handshake collection
 	c := HandshakeCollection()
 	if c == nil {
-		return nil, errors.New("Could not get Handshake Collection")
+        return nil, "", errors.New("Could not get Handshake Collection")
 	}
 
 	// retrieve handshake by stateHex and make sure it exists
 	state, err := hex.DecodeString(stateHex)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	hraw, err := c.Get(state)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if hraw == nil {
-		return nil, errors.New("State token not found")
+		return nil, "", errors.New("State token not found")
 	}
 
 	// decode serialized handshake
 	h, err := DecodeHandshake(hraw)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// TODO check that state isn't expired, and that it hasn't already been redeemed
 
 	// get the correct trasport
 	var transport *oauth.Transport
+    var serviceName string
 	switch h.Config {
 	case C_GOOGLE:
 		transport = GoogleOauthTransport
+        serviceName = GoogleServiceName
 	case C_LINKEDIN:
 		transport = LinkedInOauthTransport
+        serviceName = LinkedInServiceName
 	default:
-		return nil, errors.New("Unknown Oauth configuration")
+		return nil, "", errors.New("Unknown Oauth configuration")
 	}
 
 
 	// exchange code for token
 	token, err := transport.Exchange(code)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// mark handshake as exchanged
 	h.Exchanged = true
 	err = h.Save()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return token, nil
+	return token, serviceName, nil
 }
 
 func GetGoogleUserInfo(token *oauth.Token) (*http.Response, error) {
