@@ -51,11 +51,11 @@ func Init() {
 func Serve() {
 	port := infoauth.GetSetting(infoauth.S_PORT)
 	http.HandleFunc("/user/", infoauth.UserHandler)
-	http.HandleFunc("/api/oauth/google/url/", infoauth.GetGoogleAuthURLHandler)
-	http.HandleFunc("/api/oauth/linkedin/url/", infoauth.GetLinkedInAuthURLHandler)
-	http.HandleFunc("/api/oauth/token", infoauth.ExchangeCodeHandler)
-	http.HandleFunc("/oauth/google/url/", infoauth.GoogleAuthRedirectHandler)
-	http.HandleFunc("/oauth/linkedin/url/", infoauth.LinkedInAuthRedirectHandler)
+	http.HandleFunc("/oauth/google/url/", infoauth.GetGoogleAuthURLHandler)
+	http.HandleFunc("/oauth/linkedin/url/", infoauth.GetLinkedInAuthURLHandler)
+	http.HandleFunc("/oauth/token", infoauth.ExchangeCodeHandler)
+	http.HandleFunc("/oauth/google/redirect/", infoauth.GoogleAuthRedirectHandler)
+	http.HandleFunc("/oauth/linkedin/redirect/", infoauth.LinkedInAuthRedirectHandler)
 	log.Printf("Starting Server on port %s...", port)
 	http.ListenAndServe(":"+port, nil)
 }

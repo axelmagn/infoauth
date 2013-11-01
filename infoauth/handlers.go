@@ -2,9 +2,9 @@ package infoauth
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"github.com/axelmagn/envcfg"
 )
@@ -14,6 +14,7 @@ const UserIDKey = "id"
 
 const OauthCodeKey = "code" 
 const OauthStateKey = "state" 
+const OuterRedirectKey = "redirect"
 
 func Debug(e error) string {
 	debug := GetSetting(S_DEBUG)
@@ -144,7 +145,7 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: rewrite this to get a handshake so that it knows what service it's using
-	token, serviceName, err := ExchangeCode(code, state)
+	token, h, err := ExchangeCode(code, state)
 	if err != nil {
 		http.Error(w, "Could not exchange token: " + err.Error(), http.StatusBadRequest)
 		return
@@ -156,46 +157,78 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    switch serviceName {
-    case GoogleServiceName:
-        // TODO: only do this for google
-        userInfo, err := GetGoogleUserInfo(token)
-        if err != nil {
-            http.Error(w, "Error retrieving user info.\n" + Debug(err), http.StatusInternalServerError)
-        }
-
-        // TODO: only do this for google
-        plusProfile, err := GetGooglePlusProfile(token)
-        if err != nil {
-            http.Error(w, "Error retrieving user plus profile.\n" + Debug(err), http.StatusInternalServerError)
-        }
-        defer userInfo.Body.Close()
-        defer plusProfile.Body.Close()
-        io.Copy(w, userInfo.Body)
-        io.Copy(w, plusProfile.Body)
+	var service string
+    switch h.Config {
+    case C_GOOGLE:
+        service = GoogleServiceName
+    case C_LINKEDIN:
+        service = GoogleServiceName
+    default:
+    	service = "Unknown"
     }
 
-    w.Write([]byte("\nService:\t"+serviceName+"\n"))
-	w.Write(tokenJSON)
+    // No redirect specified
+    if h.OuterRedirect == "" {
+	    w.Write([]byte("\nService:\t"+service+"\n"))
+		w.Write(tokenJSON)
+	} else {
+		redirect, err := url.Parse(h.OuterRedirect)
+		if err != nil {
+			http.Error(w, "Could not parse redirect URL.\n" + Debug(err), http.StatusInternalServerError)
+			return
+		}
+
+		params := redirect.Query()
+		params.Set("access_token", token.AccessToken)
+		params.Set("service", service)
+		redirect.RawQuery = params.Encode()
+		http.Redirect(w, r, redirect.String(), http.StatusSeeOther)
+	}
+
 }
 
 func GoogleAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET:\t%s", r.URL.Path)
-	url, err := NewGoogleAuthURL()
-	if err != nil {
-		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
-		return
+	outerRedirect := r.FormValue(OuterRedirectKey)
+	var authUrl string
+	var err error
+	if outerRedirect == "" {	
+		authUrl, err = NewGoogleAuthURL()
+		if err != nil {
+			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		authUrl, err = NewGoogleAuthURLWithRedirect(outerRedirect)
+		if err != nil {
+			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+			return
+		}
+
 	}
-    http.Redirect(w, r, url, http.StatusSeeOther)
+    http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
 func LinkedInAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET:\t%s", r.URL.Path)
-	url, err := NewLinkedInAuthURL()
-	if err != nil {
-		http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
-		return
+	outerRedirect := r.FormValue(OuterRedirectKey)
+	if outerRedirect == "" {	
+		authUrl, err := NewLinkedInAuthURL()
+		if err != nil {
+			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+			return
+		}
+	    http.Redirect(w, r, authUrl, http.StatusOK)
+	    return
+	} else {
+		authUrl, err := NewLinkedInAuthURLWithRedirect(outerRedirect)
+		if err != nil {
+			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
+			return
+		}
+	    http.Redirect(w, r, authUrl, http.StatusSeeOther)
+	    return
+
 	}
-    http.Redirect(w, r, url, http.StatusSeeOther)
 }
 

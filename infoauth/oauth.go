@@ -100,6 +100,7 @@ type Handshake struct {
 	Expires time.Time
 	Config  uint // we don't store a config pointer so that marshalling doesn't duplicate config
 	Exchanged bool
+	OuterRedirect string
 }
 
 func DecodeHandshake(raw []byte) (*Handshake, error) {
@@ -113,24 +114,58 @@ func DecodeHandshake(raw []byte) (*Handshake, error) {
 }
 
 func NewGoogleAuthURL() (string, error) {
-	return NewAuthUrl(GoogleOauthConfig)
+	u, _, err := NewAuthUrl(GoogleOauthConfig)
+	return u, err
 }
 
 func NewLinkedInAuthURL() (string, error) {
-	return NewAuthUrl(LinkedInOauthConfig)
+	u, _, err := NewAuthUrl(LinkedInOauthConfig)
+	return u, err
 }
 
-func NewAuthUrl(c *oauth.Config) (string, error) {
+func NewGoogleAuthURLWithRedirect(redirectURL string) (string, error) {
+	u, h, err := NewAuthUrl(GoogleOauthConfig)
+	if err != nil {
+		return u, err
+	}
+
+	h.OuterRedirect = redirectURL
+
+	err = h.Save()
+	if err != nil {
+		return "", err
+	}
+
+	return u, err
+}
+
+func NewLinkedInAuthURLWithRedirect(redirectURL string) (string, error) {
+	u, h, err := NewAuthUrl(LinkedInOauthConfig)
+	if err != nil {
+		return u, err
+	}
+
+	h.OuterRedirect = redirectURL
+
+	err = h.Save()
+	if err != nil {
+		return "", err
+	}
+	
+	return u, err
+}
+
+func NewAuthUrl(c *oauth.Config) (string, *Handshake, error) {
 	// init & store new handshake struct
 	randBytes := make([]byte, StateLen)
 	_, err := rand.Reader.Read(randBytes)
 	if err != nil {
-		return "", nil
+		return "", nil, nil
 	}
 
 	configConst := ConfigToConst(c)
 	if configConst == C_UNKNOWN {
-		return "", fmt.Errorf("Unknown config %v", c)
+		return "", nil, fmt.Errorf("Unknown config %v", c)
 	}
 	h := &Handshake{
 		State:   randBytes,
@@ -142,7 +177,7 @@ func NewAuthUrl(c *oauth.Config) (string, error) {
 	// use handshake state token to get new url
 	err = h.Save()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	// convert to hex for printing
@@ -152,66 +187,63 @@ func NewAuthUrl(c *oauth.Config) (string, error) {
 	url:= c.AuthCodeURL(stateHex)
 
 	// encode to string
-	return url, nil
+	return url, h, nil
 }
 
-func ExchangeCode(code, stateHex string) (*oauth.Token, string, error) {
+func ExchangeCode(code, stateHex string) (*oauth.Token, *Handshake, error) {
 	// get handshake collection
 	c := HandshakeCollection()
 	if c == nil {
-        return nil, "", errors.New("Could not get Handshake Collection")
+        return nil, nil, errors.New("Could not get Handshake Collection")
 	}
 
 	// retrieve handshake by stateHex and make sure it exists
 	state, err := hex.DecodeString(stateHex)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	hraw, err := c.Get(state)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	if hraw == nil {
-		return nil, "", errors.New("State token not found")
+		return nil, nil, errors.New("State token not found")
 	}
 
 	// decode serialized handshake
 	h, err := DecodeHandshake(hraw)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
 	// TODO check that state isn't expired, and that it hasn't already been redeemed
 
 	// get the correct trasport
 	var transport *oauth.Transport
-    var serviceName string
 	switch h.Config {
 	case C_GOOGLE:
 		transport = GoogleOauthTransport
-        serviceName = GoogleServiceName
 	case C_LINKEDIN:
 		transport = LinkedInOauthTransport
-        serviceName = LinkedInServiceName
 	default:
-		return nil, "", errors.New("Unknown Oauth configuration")
+		return nil, nil, errors.New("Unknown Oauth configuration")
 	}
 
 
 	// exchange code for token
 	token, err := transport.Exchange(code)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
 	// mark handshake as exchanged
 	h.Exchanged = true
 	err = h.Save()
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	return token, serviceName, nil
+	return token, h, nil
 }
 
 func GetGoogleUserInfo(token *oauth.Token) (*http.Response, error) {
