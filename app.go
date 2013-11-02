@@ -37,20 +37,10 @@ func Init() {
 	if err != nil {
 		panic(err.Error())
 	}
-
-
-	// set up a dummy user
-	u := &infoauth.User{ID: 1}
-	u.PlusProfile = "Google: Axel Magnuson"
-	u.LinkedInProfile = "LinkedIn: Axel Magnuson"
-	u.Save()
-	log.Printf("Created Dummy user\n")
-
 }
 
 func Serve() {
 	port := infoauth.GetSetting(infoauth.S_PORT)
-	http.HandleFunc("/user/", infoauth.UserHandler)
 	http.HandleFunc("/oauth/google/url/", infoauth.GetGoogleAuthURLHandler)
 	http.HandleFunc("/oauth/linkedin/url/", infoauth.GetLinkedInAuthURLHandler)
 	http.HandleFunc("/oauth/token", infoauth.ExchangeCodeHandler)

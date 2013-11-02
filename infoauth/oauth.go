@@ -2,16 +2,15 @@
 package infoauth
 
 import (
+	"code.google.com/p/goauth2/oauth"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
+	"github.com/steveyen/gkvlite"
 	"strings"
 	"time"
-	"github.com/steveyen/gkvlite"
-	"code.google.com/p/goauth2/oauth"
 	// "code.google.com/p/google-api-go-client/plus/v1"
 )
 
@@ -96,10 +95,10 @@ func ConstToConfig(c uint) *oauth.Config {
 }
 
 type Handshake struct {
-	State   []byte
-	Expires time.Time
-	Config  uint // we don't store a config pointer so that marshalling doesn't duplicate config
-	Exchanged bool
+	State         []byte
+	Expires       time.Time
+	Config        uint // we don't store a config pointer so that marshalling doesn't duplicate config
+	Exchanged     bool
 	OuterRedirect string
 }
 
@@ -151,7 +150,7 @@ func NewLinkedInAuthURLWithRedirect(redirectURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	return u, err
 }
 
@@ -168,9 +167,9 @@ func NewAuthUrl(c *oauth.Config) (string, *Handshake, error) {
 		return "", nil, fmt.Errorf("Unknown config %v", c)
 	}
 	h := &Handshake{
-		State:   randBytes,
-		Expires: time.Now().Add(HandshakeExpireDuration),
-		Config:  configConst,
+		State:     randBytes,
+		Expires:   time.Now().Add(HandshakeExpireDuration),
+		Config:    configConst,
 		Exchanged: false,
 	}
 
@@ -184,7 +183,7 @@ func NewAuthUrl(c *oauth.Config) (string, *Handshake, error) {
 	stateHex := hex.EncodeToString(h.State)
 
 	// get url using state
-	url:= c.AuthCodeURL(stateHex)
+	url := c.AuthCodeURL(stateHex)
 
 	// encode to string
 	return url, h, nil
@@ -194,7 +193,7 @@ func ExchangeCode(code, stateHex string) (*oauth.Token, *Handshake, error) {
 	// get handshake collection
 	c := HandshakeCollection()
 	if c == nil {
-        return nil, nil, errors.New("Could not get Handshake Collection")
+		return nil, nil, errors.New("Could not get Handshake Collection")
 	}
 
 	// retrieve handshake by stateHex and make sure it exists
@@ -229,7 +228,6 @@ func ExchangeCode(code, stateHex string) (*oauth.Token, *Handshake, error) {
 		return nil, nil, errors.New("Unknown Oauth configuration")
 	}
 
-
 	// exchange code for token
 	token, err := transport.Exchange(code)
 	if err != nil {
@@ -244,44 +242,6 @@ func ExchangeCode(code, stateHex string) (*oauth.Token, *Handshake, error) {
 	}
 
 	return token, h, nil
-}
-
-func GetGoogleUserInfo(token *oauth.Token) (*http.Response, error) {
-	transport := &oauth.Transport{
-		Token: token,
-		Config: GoogleOauthConfig,
-		Transport: http.DefaultTransport,
-	}
-
-	client := transport.Client()
-
-	url := GetSetting(S_GOOGLE_USERINFO_URL)
-
-	r, err := client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	return r, nil
-}
-
-func GetGooglePlusProfile(token *oauth.Token) (*http.Response, error) {
-	transport := &oauth.Transport{
-		Token: token,
-		Config: GoogleOauthConfig,
-		Transport: http.DefaultTransport,
-	}
-
-	client := transport.Client()
-
-	url := GetSetting(S_GOOGLE_PERSON_URL)
-
-	r, err := client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	return r, nil
 }
 
 func (h *Handshake) Key() ([]byte, error) {

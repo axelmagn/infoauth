@@ -2,18 +2,17 @@ package infoauth
 
 import (
 	"encoding/json"
+	"github.com/axelmagn/envcfg"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
-	"github.com/axelmagn/envcfg"
 )
 
 const UserContentKey = "user"
 const UserIDKey = "id"
 
-const OauthCodeKey = "code" 
-const OauthStateKey = "state" 
+const OauthCodeKey = "code"
+const OauthStateKey = "state"
 const OuterRedirectKey = "redirect"
 
 func Debug(e error) string {
@@ -22,40 +21,6 @@ func Debug(e error) string {
 		return e.Error()
 	}
 	return ""
-}
-
-func GetUserHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.FormValue(UserIDKey)
-	if idStr == "" {
-		http.Error(w, "No User ID Specified.", http.StatusBadRequest)
-		return
-	}
-
-	id64, err := strconv.ParseUint(idStr, 10, 0)
-	id := uint(id64)
-	if err != nil {
-		http.Error(w, "Error parsing User id.\n"+Debug(err), http.StatusInternalServerError)
-		return
-	}
-
-	u, err := GetUser(id)
-	if err != nil {
-		http.Error(w, "Error retrieving User.\n"+Debug(err), http.StatusInternalServerError)
-		return
-	}
-
-	if u == nil {
-		http.Error(w, "User does not exist.", http.StatusBadRequest)
-		return
-	}
-
-	raw, err := u.Value()
-	if err != nil {
-		http.Error(w, "Error encoding User.\n"+Debug(err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(raw)
 }
 
 func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -147,34 +112,34 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: rewrite this to get a handshake so that it knows what service it's using
 	token, h, err := ExchangeCode(code, state)
 	if err != nil {
-		http.Error(w, "Could not exchange token: " + err.Error(), http.StatusBadRequest)
+		http.Error(w, "Could not exchange token: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	tokenJSON, err := json.Marshal(token)
 	if err != nil {
-		http.Error(w, "Error serializing token.\n" + Debug(err), http.StatusInternalServerError)
+		http.Error(w, "Error serializing token.\n"+Debug(err), http.StatusInternalServerError)
 		return
 	}
 
 	var service string
-    switch h.Config {
-    case C_GOOGLE:
-        service = GoogleServiceName
-    case C_LINKEDIN:
-        service = GoogleServiceName
-    default:
-    	service = "Unknown"
-    }
+	switch h.Config {
+	case C_GOOGLE:
+		service = GoogleServiceName
+	case C_LINKEDIN:
+		service = GoogleServiceName
+	default:
+		service = "Unknown"
+	}
 
-    // No redirect specified
-    if h.OuterRedirect == "" {
-	    w.Write([]byte("\nService:\t"+service+"\n"))
+	// No redirect specified
+	if h.OuterRedirect == "" {
+		w.Write([]byte("\nService:\t" + service + "\n"))
 		w.Write(tokenJSON)
 	} else {
 		redirect, err := url.Parse(h.OuterRedirect)
 		if err != nil {
-			http.Error(w, "Could not parse redirect URL.\n" + Debug(err), http.StatusInternalServerError)
+			http.Error(w, "Could not parse redirect URL.\n"+Debug(err), http.StatusInternalServerError)
 			return
 		}
 
@@ -192,7 +157,7 @@ func GoogleAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
 	outerRedirect := r.FormValue(OuterRedirectKey)
 	var authUrl string
 	var err error
-	if outerRedirect == "" {	
+	if outerRedirect == "" {
 		authUrl, err = NewGoogleAuthURL()
 		if err != nil {
 			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
@@ -206,29 +171,28 @@ func GoogleAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-    http.Redirect(w, r, authUrl, http.StatusSeeOther)
+	http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
 func LinkedInAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET:\t%s", r.URL.Path)
 	outerRedirect := r.FormValue(OuterRedirectKey)
-	if outerRedirect == "" {	
+	if outerRedirect == "" {
 		authUrl, err := NewLinkedInAuthURL()
 		if err != nil {
 			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
 			return
 		}
-	    http.Redirect(w, r, authUrl, http.StatusOK)
-	    return
+		http.Redirect(w, r, authUrl, http.StatusOK)
+		return
 	} else {
 		authUrl, err := NewLinkedInAuthURLWithRedirect(outerRedirect)
 		if err != nil {
 			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
 			return
 		}
-	    http.Redirect(w, r, authUrl, http.StatusSeeOther)
-	    return
+		http.Redirect(w, r, authUrl, http.StatusSeeOther)
+		return
 
 	}
 }
-

@@ -1,9 +1,17 @@
+// This is a slightly broken library.  It was originally intended to
+// store user information retrieved at the same time as an oauth
+// exchange, but that requirement was later relaxed.  Users contains
+// methods that were originally interspersed between infoauth package
+// files. They have not been adapted to work as a standalone package.
 package infoauth
 
 import (
+	"code.google.com/p/goauth2/oauth"
 	"encoding/json"
 	"errors"
 	"github.com/steveyen/gkvlite"
+	"net/http"
+	"strconv"
 )
 
 var userCollectionKey = "users"
@@ -164,4 +172,76 @@ func (u *User) Save() error {
 	// extract linkedin id for index
 
 	return UserCollection().Set(k, v)
+}
+
+func GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.FormValue(UserIDKey)
+	if idStr == "" {
+		http.Error(w, "No User ID Specified.", http.StatusBadRequest)
+		return
+	}
+
+	id64, err := strconv.ParseUint(idStr, 10, 0)
+	id := uint(id64)
+	if err != nil {
+		http.Error(w, "Error parsing User id.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+
+	u, err := GetUser(id)
+	if err != nil {
+		http.Error(w, "Error retrieving User.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+
+	if u == nil {
+		http.Error(w, "User does not exist.", http.StatusBadRequest)
+		return
+	}
+
+	raw, err := u.Value()
+	if err != nil {
+		http.Error(w, "Error encoding User.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(raw)
+}
+
+func GetGoogleUserInfo(token *oauth.Token) (*http.Response, error) {
+	transport := &oauth.Transport{
+		Token:     token,
+		Config:    GoogleOauthConfig,
+		Transport: http.DefaultTransport,
+	}
+
+	client := transport.Client()
+
+	url := GetSetting(S_GOOGLE_USERINFO_URL)
+
+	r, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func GetGooglePlusProfile(token *oauth.Token) (*http.Response, error) {
+	transport := &oauth.Transport{
+		Token:     token,
+		Config:    GoogleOauthConfig,
+		Transport: http.DefaultTransport,
+	}
+
+	client := transport.Client()
+
+	url := GetSetting(S_GOOGLE_PERSON_URL)
+
+	r, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }

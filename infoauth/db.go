@@ -40,12 +40,7 @@ func InitModels() error {
 		return ErrorStoreCreationFailedSilently
 	}
 
-	c := InitUserCollection()
-	if c == nil {
-		return errors.New("Failed to initialize user collection")
-	}
-
-	c = InitHandshakeCollection()
+	c := InitHandshakeCollection()
 	if c == nil {
 		return errors.New("Failed to initialize handshake collection")
 	}
