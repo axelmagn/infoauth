@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/steveyen/gkvlite"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -206,6 +207,58 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(raw)
+}
+
+func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
+	raw := r.FormValue(UserContentKey)
+	if raw == "" {
+		http.Error(w, "No user submitted", http.StatusBadRequest)
+		return
+	}
+
+	u, err := DecodeUser([]byte(raw))
+	if err != nil {
+		http.Error(w, "Could not parse User.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+
+	if u.ID == 0 {
+		u.ID, err = NewUserID()
+		if err != nil {
+			http.Error(w, "Could not assign User ID.\n"+Debug(err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	err = u.Save()
+	if err != nil {
+		http.Error(w, "Could not save User.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+
+	v, err := u.Value()
+	if err != nil {
+		http.Error(w, "Could not decode user after saving.\n"+Debug(err), http.StatusInternalServerError)
+		return
+	}
+	w.Write(v)
+}
+
+// takes a regex specifying path groups
+// assumes that 2nd group is the user id
+// returns a handler function for users
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		log.Printf("GET:\t%s", r.URL.Path)
+		GetUserHandler(w, r)
+	case "POST":
+		log.Printf("POST:\t%s", r.URL.Path)
+		SaveUserHandler(w, r)
+	case "PUT":
+		log.Printf("PUT:\t%s", r.URL.Path)
+		SaveUserHandler(w, r)
+	}
 }
 
 func GetGoogleUserInfo(token *oauth.Token) (*http.Response, error) {
