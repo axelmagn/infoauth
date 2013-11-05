@@ -1,0 +1,33 @@
+Infoauth Redirect API
+=====================
+
+Infoauth's primary function is to expose both REST API and Redirection endpoints for obtaining access tokens via oauth.  It exposes the following endpoints:
+
+	/google/url		# Create and print an oauthauthorization url 
+					# which a user can follow to authorize our app via
+					# their google account
+
+	/linkedin/url	# Create and print an oauth authorization url 
+					# which a user can follow to authorize our app via
+					# their linkedin account
+
+	/google/		# Same as above, but automatically redirects to
+					# the url
+
+	/linkedin/		# Same as above, but automatically redirects to
+					# the url
+
+	/				# Where the user is redirected to after
+					# authenticating via openauth.  Takes
+					# authorization code and exchanges it for an
+					# access token.  If a redirect url is specified,
+					# it redirects after this stage
+
+When requesting a url, a redirect can be specified with the `redirect=<URL>` query parameter. The user will then be redirected to the url after the handshake is complete, with the access token, success status, and service name as query parameters. In cases of unsuccessful handshakes, the user is not redirected. At the time of writing, redirects do not occur in the case of bad inputs or server errors, so outgoing redirects will always have success=true.
+
+Redirect query parameters:
+
+	access_token	# the access token
+	service			# service name.  Takes values [ GOOGLE | LINKEDIN ]
+	success			# whether the exchange was successful
+	error (planned) # in cases of unsuccessful queries, error description
