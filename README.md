@@ -3,25 +3,48 @@ infoauth
 
 OAuth gateway and API for infolab
 
+Requirements
+------------
+
+To download and run this software, you need a working version of the Go Programming Language installed and configured.  Instructions on setup can be found here:
+
+	http://golang.org/doc/install
+
+
 
 Installation
 ------------
 
-Obtain and install infoauth with `go get`:
+Obtain and install infoauth and its dependencies with `go get`:
 
 	go get github.com/axelmagn/infoauth
 
 There are a few variables that need to be set in the configuration file.  See example in `config/settings.ecfg`.  This is also the default config file path, which can be specified with a command line option.  Infoauth uses [envcfg](http://github.com/axelmagn/envcfg) as a settings parser, if you need to write your own settings.
 
-once you have your configuration file set, run the app with:
 
-	infoauth
+### Supporting Files
 
-or for a custom config path:
+The server is deployed in the form of a binary located under `$GOPATH/bin/infoauth`.  That binary expects to be run from a folder containing the following file structure:
 
-	infoauth -config="<CONFIG_FILE>"
+	.
+	|-- config
+	|   `-- settings.ecfg
+	|-- data
+	|	`-- db.gkvlite
+	|-- templates
+		`-- about.html
 
-This will begin serving the infoauth endpoints on the specified port.
+All of these files and folders are available in the project source directory.  For this reason, **the easiest way** to run this app is to run the following commands:
+
+	cd $GOPATH/src/github.com/axelmagn/infoauth
+
+	< edit your settings in conf/settings.ecfg >
+
+	go build app.go
+	./app
+
+If there is need for it, I will update infoauth with a more user friendly deployment process.
+
 
 
 Redirect API
