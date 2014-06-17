@@ -132,23 +132,22 @@ func LinkedInAuthRedirectHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET:\t%s", r.URL.Path)
 	defer PanicToError(w)
 	outerRedirect := r.FormValue(OuterRedirectKey)
+	var authUrl string
+	var err error
 	if outerRedirect == "" {
-		authUrl, err := NewLinkedInAuthURL()
+		authUrl, err = NewLinkedInAuthURL()
 		if err != nil {
 			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, authUrl, http.StatusOK)
-		return
 	} else {
-		authUrl, err := NewLinkedInAuthURLWithRedirect(outerRedirect)
+		authUrl, err = NewLinkedInAuthURLWithRedirect(outerRedirect)
 		if err != nil {
 			http.Error(w, "Could not generate Authentication URL.\n"+Debug(err), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, authUrl, http.StatusSeeOther)
-		return
 	}
+	http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
 func PanicToError(w http.ResponseWriter) {
