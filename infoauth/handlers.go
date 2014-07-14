@@ -79,7 +79,7 @@ func ExchangeCodeHandler(w http.ResponseWriter, r *http.Request) {
 	case C_GOOGLE:
 		service = GoogleServiceName
 	case C_LINKEDIN:
-		service = GoogleServiceName
+		service = LinkedInServiceName
 	default:
 		service = "Unknown"
 	}
